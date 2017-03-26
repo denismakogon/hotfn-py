@@ -1,0 +1,14 @@
+sudo: false
+language: python
+python:
+- 3.5
+env:
+- TOX_ENV="py35"
+- TOX_ENV="pep8"
+install:
+- pip install tox
+- pip install codecov
+script:
+- tox -e $TOX_ENV
+after_success:
+- codecov
