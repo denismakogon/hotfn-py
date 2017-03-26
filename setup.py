@@ -27,7 +27,7 @@ setuptools.setup(
     url='https://hotfn.readthedocs.org',
     author='Denis Makogon',
     author_email='lildee1991@gmail.com',
-    packages=setuptools.find_packages(include=["hotfn", ], exclude=["hotfn.tests", ]),
+    packages=setuptools.find_packages(exclude=["hotfn.tests", ]),
     install_requires=[],
     license='License :: OSI Approved :: Apache Software License',
     classifiers=[

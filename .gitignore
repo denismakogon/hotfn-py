@@ -18,3 +18,4 @@ releasenotes/build
 *.log*
 *.csv
 venv
+.venv

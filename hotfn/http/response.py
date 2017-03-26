@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 class RawResponse(object):
     PATTERN = ("HTTP/{proto_major}.{proto_minor} "
                "{int_status} {verbose_status}\r\n"
