@@ -49,6 +49,7 @@ class RawResponse(object):
             for hk, hv in headers.items():
                 result += "{}: {}\r\n".format(hk, hv)
             return result + "\r\n"
+        return ""
 
     def __encode_data(self, data):
         return data + "\r\n" if data else "", len(data) if data else 0
