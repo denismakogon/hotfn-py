@@ -1,25 +1,23 @@
 sudo: false
 language: python
-
 python:
 - 3.5
-
 env:
 - TOX_ENV="py35"
 - TOX_ENV="pep8"
-
 install:
 - pip install tox
 - pip install codecov
-
 script:
 - tox -e $TOX_ENV
-
 after_success:
 - codecov
-
 deploy:
   provider: pypi
   user: denis_makogon
   password:
-    secure: QgoQK/qfiSjOjrKziADPERcbkcOaf89j3UpGnRMTBmCLtEJVszoJAh/jxfUjRyHJVMofiCui6PxpjQcjIiqnyU/lIqpXsuD1mNKb3zLnVjwe0G/+B/mOVV9gbnwIlszu7UTVLSZUXELnWxQ48zEZ3OSItFB935uURSJ6a0WcMtjDoOpPPVzEXAMUqKvEJWfCylGhNtXlyqPH7Pq3imMYLJf8v8HBFyUQTmI0muMz7nSCxIn0ZXC+bexBRk1gqzwMEoYLwZUwlPrgnX6TON7X+0HzbTHBVXqPYS/AT6dmGAiq+riluJqRmTwzKJXdJcd/E0o68LCBE6IvDDFoTrAGBKofMn5ObMaUlydPBvgmqx8S/VO7j7piNpy8ko5IBclWNeV9JilcWSxqZux8+FLdS8leYnqmiNT3cy2cdJA24xQI5biZ95ILkwkycXm92eOATxpN9i5guJLT3I1DjkpyiRdNwSLLXC/SZldiDaBcQqXJafs7nocZZG1ZVS5ykW5VpOXxlC96hw3BMIPyUfJjZW4xpD//4o2M7lIWIXoKTmQ0u9MRxjE4d2ufodnP0qf4lQo3rLuWzpbg0tswQoO3Fn/xWYyGCLtCGFgNUGHjZP3LbmKomJGtQzjVF9ZJeuBKBpDXsXMs/i2q4NWeS7QI+5qTuVZ2seq9GBPHOOHrHUg=
+    secure: WMKKnV3zTtxqFhoM8ucyvzxXeDUwbIpQKq99dhGiAEluUIqlZGm/a8XjUUz3dVUasz4dCHP52htPMwXL/19Ue5xe9pw0CX3swcDMqoXzysioI+25VhU8b5A/v6mXFfq1gz6PCExO7DB2KOexaDMfQo5UyRMx9bslbhz3gRg9ceNKWWsKL7sf5RU4WtzaqJavE60hbJTeDyZ7RuEfASxtQCwvJidcttihf92vlivkP30dk7jAmmaPOdQg3KUnYPosvtM0Qp2dXPHKhiv2/23WS9CRW3r26vZdPJwZQ7N2TE+RpdrwSZEafSwzj+QVfi9dbacrDJ2bNwsGtelbIT09pQK0sn2BGnZ6Idxulwl6vvKp8ZgReZVqPWn03Y2dAjRehkEaftAx+8knK97T/SIgZ4BZWIhoMoMAQmEY4YwxOLZFw+lpvumI2ThTLP2tbuEnH3cSQXe6uMpcI2J+SpQAk6qj1mGIEkEtACdJf/mcM6PZNyvJSwkO+rGPCVj/O7+NjTkzpIXsZwFmLu8Mzg1HGMKxJafQUCb9FMw6fs9ntsQzo006oM6DdZu5dQXJ7m/DLzER1yBxQrXuaogQwB8dFHvJJWO5kUz/R9N6xSW6gfjBAsgODfqzZW58cd2b9kVNDUOgt9dnjLJboL8XkrkMPDsvuSzDFBP6Hl3SQQ2kuZY=
+  on:
+    tags: true
+    distributions: sdist bdist_wheel
+    repo: denismakogon/hotfn-py
