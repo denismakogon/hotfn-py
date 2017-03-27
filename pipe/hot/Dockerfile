@@ -7,4 +7,4 @@ WORKDIR /code
 ADD . /code/
 RUN pip install -r requirements.txt
 
-ENTRYPOINT ["python3", "app.py"]
+ENTRYPOINT ["python3", "docker-app.py"]

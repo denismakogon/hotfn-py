@@ -18,8 +18,7 @@ if __name__ == "__main__":
                 })
                 rs = response.RawResponse(
                     version, 200, "OK",
-                    response_data=data,
-                    http_headers=headers)
+                    response_data=data)
                 print(rs.dump())
             except Exception as _:
                 print(response.RawResponse(
