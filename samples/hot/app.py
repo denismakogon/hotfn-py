@@ -24,7 +24,6 @@ class FutureParser(object):
 
     def __init__(self):
         self.lines = []
-        self.lock = asyncio.Lock()
 
     def add_line(self, *args):
         line = sys.stdin.readline()
@@ -34,6 +33,7 @@ class FutureParser(object):
                 self.parse_request()
 
     def parse_request(self):
+        sys.stderr.write(str(self.lines))
         stdin = "".join(self.lines)
         sys.stderr.write("Income request %s".format(stdin))
         rq = request.RawRequest(stdin)
@@ -47,10 +47,10 @@ class FutureParser(object):
             rs = response.RawResponse(
                 version, 200, "OK",
                 response_data=data)
-            print(rs.dump())
+            sys.stdout.write(rs.dump())
         except Exception as ex:
             sys.stderr.write(str(ex))
-            print(response.RawResponse(
+            sys.stdout.write(response.RawResponse(
                 (1, 1), 500, "Internal Server Error",
                 http_headers={
                     "Date": "Sun, 26 Mar 2017 19:26:09 GMT"
