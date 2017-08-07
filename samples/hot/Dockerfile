@@ -1,4 +1,4 @@
-FROM python:3.5
+FROM python:3.6
 
 ENV PYTHONUNBUFFERED 1
 
@@ -7,4 +7,4 @@ WORKDIR /code
 ADD . /code/
 RUN pip install -r requirements.txt
 
-ENTRYPOINT ["python3", "docker-app.py"]
+ENTRYPOINT ["python3", "app.py"]

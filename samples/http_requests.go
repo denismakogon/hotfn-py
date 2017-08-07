@@ -8,10 +8,11 @@ import (
 	"io/ioutil"
 	"net/http/httputil"
 	"strconv"
+	"time"
+	"os"
 )
 
-func createRequest() {
-	data := "hello:hello"
+func createRequest(data string) {
 	var buf bytes.Buffer
 
 	req := http.Request{
@@ -44,5 +45,12 @@ func createRequest() {
 
 
 func main() {
-	createRequest()
+	hot := os.Getenv("HOT")
+	createRequest("hello:hello")
+	if hot != "" {
+		time.Sleep(2 * time.Second)
+		createRequest("secondtest")
+		time.Sleep(4 * time.Second)
+		createRequest(`{"name": "John"}`)
+	}
 }

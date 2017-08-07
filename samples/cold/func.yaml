@@ -1,0 +1,5 @@
+name: denismakogon/hotfnpy-cold
+version: 0.0.1
+runtime: python3
+entrypoint: python3 app.py
+path: /hotfnpy-cold
