@@ -61,8 +61,23 @@ class FutureParser(object):
 
 if __name__ == "__main__":
     if not os.isatty(sys.stdin.fileno()):
-        loop = asyncio.get_event_loop()
-        parse = FutureParser()
+        while True:
+            rq = request.RawRequest(sys.stdin.read())
+            try:
+                (method, url, dict_params,
+                 headers, version, data) = rq.parse_raw_request()
+                headers.update({
+                    "Content-Type": "text/plain; charset=utf-8",
+                    "Date": "Sun, 26 Mar 2017 19:26:09 GMT"
+                })
+                rs = response.RawResponse(
+                    version, 200, "OK",
+                    response_data=data)
+                sys.stdout.write(rs.dump())
+            except Exception as ex:
+                sys.stdout.write(response.RawResponse(
+                    (1, 1), 500, "Internal Server Error",
+                    http_headers={
+                        "Date": "Sun, 26 Mar 2017 19:26:09 GMT"
+                    }).dump())
 
-        task = loop.add_reader(sys.stdin.fileno(), parse.add_line, parse)
-        loop.run_forever()

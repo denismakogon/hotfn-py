@@ -1,7 +1,6 @@
-name: denismakogon/hotfnpy-hot
-version: 0.0.3
+name: hotfn
+version: 0.0.10
 runtime: python3
-entrypoint: python3 app.py
-path: /hotfnpy-hot
 format: http
-timeout: 100s
+timeout: 100
+path: /hotfnpy-hot
