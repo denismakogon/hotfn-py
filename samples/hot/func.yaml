@@ -1,6 +1,0 @@
-name: hotfn
-version: 0.0.10
-runtime: python3
-format: http
-timeout: 100
-path: /hotfnpy-hot
