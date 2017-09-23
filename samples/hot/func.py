@@ -10,6 +10,7 @@ class MyProtocol(asyncio.Protocol):
         print('pipe opened', file=sys.stderr, flush=True)
 
     def data_received(self, data):
+        print('received: {!r}'.format(data), file=sys.stderr, flush=True)
         data = data.decode()
         req = request.RawRequest(data)
         (method, url, dict_params,
@@ -17,19 +18,18 @@ class MyProtocol(asyncio.Protocol):
 
         rs = response.RawResponse(
             http_version, 200, "OK",
-            response_data=data)
+            response_data=req_data)
         print(rs.dump(), file=sys.stdout, flush=True)
 
-        print('received: {!r}'.format(data), file=sys.stderr, flush=True)
-
     def connection_lost(self, exc):
-        print('pipe closed', file=sys.stdout, flush=True)
+        print('pipe closed', file=sys.stderr, flush=True)
 
 
 if __name__ == "__main__":
     loop = asyncio.SelectorEventLoop()
-    loop.run_until_complete(
-        loop.connect_read_pipe(
-            MyProtocol, open("/dev/stdin", "rb", buffering=0)))
-    loop.run_forever()
-    loop.close()
+    with open("/dev/stdin", "rb", buffering=0) as stdin:
+        loop.run_until_complete(
+            loop.connect_read_pipe(
+                MyProtocol, stdin))
+        loop.run_forever()
+        loop.close()
