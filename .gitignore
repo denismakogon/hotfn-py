@@ -19,3 +19,5 @@ releasenotes/build
 *.csv
 venv
 .venv
+ChangeLog
+AUTHORS
