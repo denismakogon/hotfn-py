@@ -13,12 +13,13 @@ class MyProtocol(asyncio.Protocol):
         super(MyProtocol, self).connection_made(transport=transport)
 
     def data_received(self, data):
-        print('received: {!r}'.format(data), file=sys.stderr, flush=True)
-        data = data.decode()
+        print('received: {!r}'.format(data),
+              file=sys.stderr, flush=True)
         req = request.RawRequest(data)
         (method, url, dict_params,
          headers, http_version, req_data) = req.parse_raw_request()
-
+        print('data received: {!r}'.format(req_data),
+              file=sys.stderr, flush=True)
         rs = response.RawResponse(
             http_version, 200, "OK",
             response_data=req_data)

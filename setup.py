@@ -21,7 +21,7 @@ def read(fname):
 
 setuptools.setup(
     name='hotfn',
-    version='0.0.2',
+    version='0.0.3',
     description='Library to provide HTTP over STDIN/STDOUT',
     long_description=read('README.md'),
     url='https://hotfn.readthedocs.org',

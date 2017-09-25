@@ -63,3 +63,11 @@ class TestRequestParser(testtools.TestCase):
         self.assertEqual(("1", "1"), proto_version)
         self.assertEqual("hello:hello", request_data)
         self.assertIn("something", params)
+
+    def test_parse_data_with_fn_content_length(self):
+        req_parser = request.RawRequest(
+            data.request_with_fn_content_headers)
+        (method, url, params, headers,
+         proto_version, request_data) = req_parser.parse_raw_request()
+        self.assertEqual(len(request_data),
+                         int(headers.get("Fn_header_content_length")))

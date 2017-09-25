@@ -71,11 +71,14 @@ class RawRequest(object):
         data = ''
         dict_params = {}
         try:
-            if int(headers.get("Content-Length", 0)) > 0:
+            content_length = int(
+                headers.get("Content-Length",
+                            headers.get("Fn_header_content_length", 0)))
+            if content_length > 0:
                 # if data sent, it will be presented
                 # at the end of the raw request
                 raw_data = self.raw.rsplit("\r\n", maxsplit=1).pop()
-                data = raw_data[:-1]
+                data = raw_data[:content_length]
                 # it may appear that data contains `:` chars (JSON)
                 # in this case data will be appended to headers,
                 # that why it must be dropped off
