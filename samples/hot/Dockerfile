@@ -1,9 +1,15 @@
 FROM jjanzic/docker-python3-opencv
 
+# (Sigh)
+ARG DEVPI=docker.for.mac.localhost
+
 RUN mkdir /code
 ADD . /code/
-WORKDIR /code
-RUN pip3 install -r requirements.txt
+RUN pip install \
+    $(if [ -n "$DEVPI" ]; then \
+      echo "-i http://$DEVPI:3141/testuser/dev/+simple/ --trusted-host $DEVPI" ; \
+      fi) \
+    -r requirements.txt
 
 WORKDIR /code/
-ENTRYPOINT ["python3", "func.py"]
+ENTRYPOINT ["python3", "app.py"]

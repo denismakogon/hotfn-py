@@ -1,7 +1,0 @@
-name: denismakogon/junk-hot-json
-version: 0.0.11
-runtime: docker
-type: sync
-memory: 1024
-format: http
-path: /hot-json
