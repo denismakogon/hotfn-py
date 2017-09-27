@@ -15,7 +15,7 @@
 from hotfn.http import main
 
 
-@main.coerce_input_to_json
+@main.coerce_input_to_uknown_type
 def app(s):
     return s
 

@@ -23,32 +23,31 @@ import hotfn.http.response
 
 def main(app):
     if not os.isatty(sys.stdin.fileno()):
-        rq = hotfn.http.request.RawRequest(os.fdopen(0, 'rb'))
-        while True:
-            try:
-                (method, url, dict_params,
-                 headers, version, data) = rq.parse_raw_request()
-            except EOFError:
-                return
-            except OSError:
-                sys.stdout.write(hotfn.http.response.RawResponse(
-                    (1, 1), 500, "Internal Server Error", {}, str(ex)).dump())
-                return
-
-            try:
-                rs = normal_dispatch(app,
-                                     method=method,
-                                     url=url,
-                                     dict_params=dict_params,
-                                     headers=headers,
-                                     version=version,
-                                     data=data)
-                sys.stdout.write(rs.dump())
-
-            except Exception as ex:
-                traceback.print_exc(file=sys.stderr)
-                sys.stdout.write(hotfn.http.response.RawResponse(
-                    (1, 1), 500, "Internal Server Error", {}, str(ex)).dump())
+        with open("/dev/stdin", 'rb') as stdin:
+            rq = hotfn.http.request.RawRequest(stdin)
+            while True:
+                try:
+                    (method, url, dict_params,
+                     headers, version, data) = rq.parse_raw_request()
+                except EOFError:
+                    return
+                except OSError as ex:
+                    sys.stdout.write(hotfn.http.response.RawResponse(
+                        (1, 1), 500, "Internal Server Error", {}, str(ex)).dump())
+                    return
+                try:
+                    rs = normal_dispatch(app,
+                                         method=method,
+                                         url=url,
+                                         dict_params=dict_params,
+                                         headers=headers,
+                                         version=version,
+                                         data=data)
+                    print(rs.dump(), file=sys.stdout, flush=True)
+                except Exception as ex:
+                    traceback.print_exc(file=sys.stderr)
+                    sys.stdout.write(hotfn.http.response.RawResponse(
+                        (1, 1), 500, "Internal Server Error", {}, str(ex)).dump())
 
 
 class DispatchException(Exception):
@@ -74,7 +73,8 @@ def normal_dispatch(app, method=None, url=None, dict_params=None, headers=None, 
         elif isinstance(rs, str):
             return hotfn.http.response.RawResponse((1, 1), 200, 'OK', {}, rs)
         else:
-            return hotfn.http.response.RawResponse((1, 1), 200, 'OK', {'content-type': 'application/json'}, json.dumps(rs))
+            return hotfn.http.response.RawResponse(
+                (1, 1), 200, 'OK', {'content-type': 'application/json'}, json.dumps(rs))
     except DispatchException as e:
         return e.response()
     except Exception as e:
@@ -92,6 +92,16 @@ def coerce_input_to_json(f):
         try:
             j = json.load(data)
         except Exception as e:
-            raise DispatchException(400, "Cannot decode JSON")
+            raise DispatchException(500, "Cannot decode JSON")
+        return f(j)
+    return app
+
+
+def coerce_input_to_uknown_type(f):
+    def app(method=None, url=None, dict_params=None, headers=None, version=None, data=None):
+        try:
+            j = json.load(data)
+        except Exception as ex:
+            j = data.readall().decode()
         return f(j)
     return app
