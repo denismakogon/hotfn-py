@@ -16,68 +16,13 @@ import asyncio
 import os
 import sys
 
-from hotfn.http import request
-from hotfn.http import response
+from hotfn.http.main import main, coerce_input_to_string, coerce_input_to_json
 
 
-class FutureParser(object):
-
-    def __init__(self):
-        self.lines = []
-
-    def add_line(self, *args):
-        line = sys.stdin.readline()
-        if line:
-            self.lines.append(line)
-            if "\r\n" not in line:
-                self.parse_request()
-
-    def parse_request(self):
-        sys.stderr.write(str(self.lines))
-        stdin = "".join(self.lines)
-        sys.stderr.write("Income request %s".format(stdin))
-        rq = request.RawRequest(stdin)
-        try:
-            (method, url, dict_params,
-             headers, version, data) = rq.parse_raw_request()
-            headers.update({
-                "Content-Type": "text/plain; charset=utf-8",
-                "Date": "Sun, 26 Mar 2017 19:26:09 GMT"
-            })
-            rs = response.RawResponse(
-                version, 200, "OK",
-                response_data=data)
-            sys.stdout.write(rs.dump())
-        except Exception as ex:
-            sys.stderr.write(str(ex))
-            sys.stdout.write(response.RawResponse(
-                (1, 1), 500, "Internal Server Error",
-                http_headers={
-                    "Date": "Sun, 26 Mar 2017 19:26:09 GMT"
-                }).dump())
-        finally:
-            self.lines = []
+@coerce_input_to_json
+def app(s):
+    return s
 
 
 if __name__ == "__main__":
-    if not os.isatty(sys.stdin.fileno()):
-        while True:
-            rq = request.RawRequest(sys.stdin.read())
-            try:
-                (method, url, dict_params,
-                 headers, version, data) = rq.parse_raw_request()
-                headers.update({
-                    "Content-Type": "text/plain; charset=utf-8",
-                    "Date": "Sun, 26 Mar 2017 19:26:09 GMT"
-                })
-                rs = response.RawResponse(
-                    version, 200, "OK",
-                    response_data=data)
-                sys.stdout.write(rs.dump())
-            except Exception as ex:
-                sys.stdout.write(response.RawResponse(
-                    (1, 1), 500, "Internal Server Error",
-                    http_headers={
-                        "Date": "Sun, 26 Mar 2017 19:26:09 GMT"
-                    }).dump())
-
+    main(app)

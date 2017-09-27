@@ -1,4 +1,4 @@
-name: hotfn
+name: test/hotfn
 version: 0.0.10
 runtime: python3
 format: http
