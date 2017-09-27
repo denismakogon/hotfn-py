@@ -29,13 +29,6 @@ def main(app):
                 try:
                     (method, url, dict_params,
                      headers, version, data) = rq.parse_raw_request()
-                except EOFError:
-                    return
-                except OSError as ex:
-                    sys.stdout.write(hotfn.http.response.RawResponse(
-                        (1, 1), 500, "Internal Server Error", {}, str(ex)).dump())
-                    return
-                try:
                     rs = normal_dispatch(app,
                                          method=method,
                                          url=url,
@@ -44,10 +37,11 @@ def main(app):
                                          version=version,
                                          data=data)
                     print(rs.dump(), file=sys.stdout, flush=True)
-                except Exception as ex:
+                except (Exception, EOFError) as ex:
                     traceback.print_exc(file=sys.stderr)
-                    sys.stdout.write(hotfn.http.response.RawResponse(
-                        (1, 1), 500, "Internal Server Error", {}, str(ex)).dump())
+                    print((hotfn.http.response.RawResponse(
+                        (1, 1), 500, "Internal Server Error",
+                        {}, str(ex)).dump()), file=sys.stdout)
 
 
 class DispatchException(Exception):
@@ -56,11 +50,13 @@ class DispatchException(Exception):
         self.message = message
 
     def response(self):
-        return hotfn.http.response.RawResponse((1, 1), self.status, 'ERROR', {}, self.message)
+        return hotfn.http.response.RawResponse(
+            (1, 1), self.status, 'ERROR', {}, self.message)
 
 
-def normal_dispatch(app, method=None, url=None, dict_params=None, headers=None, version=None, data=None):
-    # Coercions here. For the moment, we want app to be request -> response
+def normal_dispatch(app, method=None, url=None,
+                    dict_params=None, headers=None,
+                    version=None, data=None):
     try:
         rs = app(method=method,
                  url=url,
@@ -74,34 +70,33 @@ def normal_dispatch(app, method=None, url=None, dict_params=None, headers=None, 
             return hotfn.http.response.RawResponse((1, 1), 200, 'OK', {}, rs)
         else:
             return hotfn.http.response.RawResponse(
-                (1, 1), 200, 'OK', {'content-type': 'application/json'}, json.dumps(rs))
+                (1, 1), 200, 'OK',
+                {'content-type': 'application/json'}, json.dumps(rs))
     except DispatchException as e:
         return e.response()
     except Exception as e:
-        return hotfn.http.response.RawResponse((1, 1), 500, 'ERROR', {}, str(e))
+        return hotfn.http.response.RawResponse(
+            (1, 1), 500, 'ERROR', {}, str(e))
 
 
-def coerce_input_to_string(f):
-    def app(method=None, url=None, dict_params=None, headers=None, version=None, data=None):
-        return f(data.readall().decode())
-    return app
-
-
-def coerce_input_to_json(f):
-    def app(method=None, url=None, dict_params=None, headers=None, version=None, data=None):
+# TODO(denismakogon): this really should be content-type based decorator
+# TODO(denismakogon): mode content types to add
+def coerce_input_to_content_type(f):
+    def app(method=None, url=None, dict_params=None,
+            headers=None, version=None, data=None):
+        content_type = headers.get("Content-Type")
         try:
-            j = json.load(data)
-        except Exception as e:
-            raise DispatchException(500, "Cannot decode JSON")
-        return f(j)
-    return app
-
-
-def coerce_input_to_uknown_type(f):
-    def app(method=None, url=None, dict_params=None, headers=None, version=None, data=None):
-        try:
-            j = json.load(data)
+            j = None
+            if content_type == "application/json":
+                j = json.load(data)
+            if content_type in [
+                    "application/text",
+                    "application/x-www-form-urlencoded"]:
+                j = data.readall().decode()
+            if j is None:
+                j = data.readall().decode()
         except Exception as ex:
-            j = data.readall().decode()
+            raise DispatchException(
+                500, "Unexpected error: {}".format(str(ex)))
         return f(j)
     return app

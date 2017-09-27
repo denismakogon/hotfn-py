@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import io
 import testtools
 
 from hotfn.http import request
@@ -27,47 +28,50 @@ class TestRequestParser(testtools.TestCase):
         super(TestRequestParser, self).tearDown()
 
     def test_parse_no_data(self):
-        req_parser = request.RawRequest(data.request_no_data)
+        req_parser = request.RawRequest(
+            io.BytesIO(data.request_no_data.encode("utf8")))
         (method, url, params, headers,
          proto_version, request_data) = req_parser.parse_raw_request()
         self.assertEqual("GET", method)
-        self.assertIn("Host", headers)
-        self.assertIn("Accept", headers)
-        self.assertIn("User-Agent", headers)
+        self.assertIn("host", headers)
+        self.assertIn("accept", headers)
+        self.assertIn("user-agent", headers)
         self.assertEqual(("1", "1"), proto_version)
-        self.assertEqual('', request_data)
+        self.assertEqual(0, request_data.length)
         self.assertIn("something", params)
 
     def test_parse_no_query(self):
-        req_parser = request.RawRequest(data.request_no_query)
+        req_parser = request.RawRequest(
+            io.BytesIO(data.request_no_query.encode("utf8")))
         (method, url, params, headers,
          proto_version, request_data) = req_parser.parse_raw_request()
         self.assertEqual("GET", method)
-        self.assertIn("Host", headers)
-        self.assertIn("Accept", headers)
-        self.assertIn("User-Agent", headers)
+        self.assertIn("host", headers)
+        self.assertIn("accept", headers)
+        self.assertIn("user-agent", headers)
         self.assertEqual(("1", "1"), proto_version)
-        self.assertEqual('', request_data)
+        self.assertEqual(0, request_data.length)
         self.assertEqual({}, params)
 
     def test_parse_data(self):
-        req_parser = request.RawRequest(data.request_with_query_and_data)
+        req_parser = request.RawRequest(io.BytesIO(
+            data.request_with_query_and_data.encode("utf8")))
         (method, url, params, headers,
          proto_version, request_data) = req_parser.parse_raw_request()
         self.assertEqual("GET", method)
-        self.assertIn("Host", headers)
-        self.assertIn("Content-Type", headers)
-        self.assertIn("Content-Length", headers)
-        self.assertEqual("11", headers.get("Content-Length"))
-        self.assertIn("User-Agent", headers)
+        self.assertIn("host", headers)
+        self.assertIn("content-type", headers)
+        self.assertIn("content-length", headers)
+        self.assertEqual("11", headers.get("content-length"))
+        self.assertIn("user-agent", headers)
         self.assertEqual(("1", "1"), proto_version)
-        self.assertEqual("hello:hello", request_data)
+        self.assertEqual("hello:hello", request_data.read().decode())
         self.assertIn("something", params)
 
     def test_parse_data_with_fn_content_length(self):
-        req_parser = request.RawRequest(
-            data.request_with_fn_content_headers)
+        req_parser = request.RawRequest(io.BytesIO(
+            data.request_with_fn_content_headers.encode("utf8")))
         (method, url, params, headers,
          proto_version, request_data) = req_parser.parse_raw_request()
-        self.assertEqual(len(request_data),
-                         int(headers.get("Fn_header_content_length")))
+        self.assertEqual(request_data.length,
+                         int(headers.get("fn_header_content_length")))

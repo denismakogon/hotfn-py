@@ -82,7 +82,7 @@ class RawRequest(object):
 
         top_line = readline(self.stream)
         if len(top_line) == 0:
-            raise EOFError()
+            raise EOFError("No request supplied")
         method, path, proto = top_line.rstrip().split(' ')
         headers = {}
         while True:
@@ -105,7 +105,10 @@ class RawRequest(object):
         if headers.get('transfer-encoding', 'identity') == 'chunked':
             self.body_stream = ChunkedStream(self.stream)
         else:
-            self.body_stream = ContentLengthStream(self.stream, int(headers.get("content-length", 0)))
+            self.body_stream = ContentLengthStream(
+                self.stream, int(headers.get(
+                    "content-length", headers.get(
+                        "fn_header_content_length", 0))))
 
         return method, path, {}, headers, (major, minor), self.body_stream
 
@@ -121,8 +124,8 @@ class ContentLengthStream(object):
         """
         Close the file.
 
-        A closed file cannot be used for further I/O operations.  close() may be
-        called more than once without error.
+        A closed file cannot be used for further I/O operations.
+        close() may be called more than once without error.
         """
         if not self.closed:
             while self.bytes_read < self.length:
@@ -133,7 +136,8 @@ class ContentLengthStream(object):
         """
         Read at most size bytes, returned as bytes.
 
-        Only makes one system call, so less data may be returned than requested.
+        Only makes one system call, so less
+         data may be returned than requested.
         In non-blocking mode, returns None if no data is available.
         Return an empty bytes object at EOF.
         """
@@ -171,9 +175,11 @@ class ContentLengthStream(object):
         Move to new file position and return the file position.
 
         Argument offset is a byte count.  Optional argument whence defaults to
-        SEEK_SET or 0 (offset from start of file, offset should be >= 0); other values
-        are SEEK_CUR or 1 (move relative to current position, positive or negative),
-        and SEEK_END or 2 (move relative to end of file, usually negative, although
+        SEEK_SET or 0 (offset from start of file, offset should be >= 0);
+        other values are SEEK_CUR or 1 (move relative to current position,
+         positive or negative),
+        and SEEK_END or 2 (move relative to end of file,
+         usually negative, although
         many platforms allow seeking beyond the end of a file).
 
         Note that not all file objects are seekable.
@@ -194,7 +200,8 @@ class ContentLengthStream(object):
 
     def truncate(self):
         """
-        Truncate the file to at most size bytes and return the truncated size.
+        Truncate the file to at most size bytes and return
+         the truncated size.
 
         Size defaults to the current file position, as returned by tell().
         The current file position is changed to the value of size.
@@ -210,14 +217,16 @@ class ContentLengthStream(object):
         Write buffer b to file, return number of bytes written.
 
         Only makes one system call, so not all of the data may be written.
-        The number of bytes actually written is returned.  In non-blocking mode,
+        The number of bytes actually written is returned.
+          In non-blocking mode,
         returns None if the write would block.
         """
         raise OSError()
 
     def __repr__(self):
         """ Return repr(self). """
-        return "ContentLengthStream({}/{})".format(self.bytes_read, self.length)
+        return "ContentLengthStream({}/{})".format(
+            self.bytes_read, self.length)
 
     @property
     def closefd(self):
@@ -233,9 +242,12 @@ class ContentLengthStream(object):
 class ChunkedStream(object):
     """Read from a chunked stream
 
-    Data is sent in a series of chunks. The Content-Length header is omitted in this case and at the beginning of
-    each chunk you need to add the length of the current chunk in hexadecimal format, followed by '\r\n' and then
-    the chunk itself, followed by another '\r\n'. The terminating chunk is a regular chunk, with the exception that
+    Data is sent in a series of chunks. The Content-Length header
+    is omitted in this case and at the beginning of
+    each chunk you need to add the length of the current chunk in
+    hexadecimal format, followed by '\r\n' and then
+    the chunk itself, followed by another '\r\n'. The terminating
+    chunk is a regular chunk, with the exception that
     its length is zero.
     """
     def __init__(self, base_stream):
@@ -250,7 +262,8 @@ class ChunkedStream(object):
         """
         Close the file.
 
-        A closed file cannot be used for further I/O operations.  close() may be
+        A closed file cannot be used for further I/O operations.
+          close() may be
         called more than once without error.
 
         In our case, we continue reading until we are closed.
@@ -264,8 +277,10 @@ class ChunkedStream(object):
         """
         Read at most size bytes, returned as bytes.
 
-        Only makes one system call, so less data may be returned than requested.
-        In non-blocking mode, returns None if no data is available.
+        Only makes one system call, so less data may be
+         returned than requested.
+        In non-blocking mode, returns None if no data
+         is available.
         Return an empty bytes object at EOF.
         """
         if self.closed:
@@ -277,7 +292,8 @@ class ChunkedStream(object):
 
             # Do we need to read a new chunk?
             if self.current_length == -1:
-                # Yes: read a line up to \r\n with the hex length of the chunk in it
+                # Yes: read a line up to \r\n with the hex
+                #  length of the chunk in it
                 line = readline(self.base_stream).rstrip()
                 self.current_read = 0
                 self.current_length = int(line, 16)
@@ -285,7 +301,8 @@ class ChunkedStream(object):
 
             # Do we need more of this chunk?
             if self.current_read < self.current_length:
-                if size < 0 or size > (self.current_length - self.current_read):
+                if size < 0 or size > (self.current_length -
+                                       self.current_read):
                     size = self.current_length - self.current_read
                 if len(self.current_chunk) < self.current_length:
                     # Read more in
@@ -293,12 +310,15 @@ class ChunkedStream(object):
                     if more is None:
                         return None
                     self.current_chunk += more
-                result = self.current_chunk[self.current_read:self.current_read + size]
+                from_size = self.current_read + size
+                result = (
+                    self.current_chunk[self.current_read:from_size])
                 self.current_read += len(result)
                 return result
 
             # Otherwise, read in the \r\n
-            if self.base_stream.read(1) != b'\r' or self.base_stream.read(1) != b'\n':
+            if (self.base_stream.read(1) != b'\r' or
+                    self.base_stream.read(1) != b'\n'):
                 raise OSError("malformed chunk")
 
             if self.current_length == 0:
@@ -314,8 +334,10 @@ class ChunkedStream(object):
         """
         Read all data from the file, returned as bytes.
 
-        In non-blocking mode, returns as much as is immediately available,
-        or None if no data is available.  Return an empty bytes object at EOF.
+        In non-blocking mode, returns as much as is
+         immediately available,
+        or None if no data is available.  Return an empty
+         bytes object at EOF.
         """
         if self.closed:
             raise OSError("Operation on closed stream")
@@ -330,10 +352,14 @@ class ChunkedStream(object):
         """
         Move to new file position and return the file position.
 
-        Argument offset is a byte count.  Optional argument whence defaults to
-        SEEK_SET or 0 (offset from start of file, offset should be >= 0); other values
-        are SEEK_CUR or 1 (move relative to current position, positive or negative),
-        and SEEK_END or 2 (move relative to end of file, usually negative, although
+        Argument offset is a byte count.
+        Optional argument whence defaults to
+        SEEK_SET or 0 (offset from start of file, offset
+        should be >= 0); other values
+        are SEEK_CUR or 1 (move relative to current position,
+        positive or negative),
+        and SEEK_END or 2 (move relative to end of file, usually
+        negative, although
         many platforms allow seeking beyond the end of a file).
 
         Note that not all file objects are seekable.
@@ -354,9 +380,11 @@ class ChunkedStream(object):
 
     def truncate(self):
         """
-        Truncate the file to at most size bytes and return the truncated size.
+        Truncate the file to at most size bytes and
+         return the truncated size.
 
-        Size defaults to the current file position, as returned by tell().
+        Size defaults to the current file position,
+         as returned by tell().
         The current file position is changed to the value of size.
         """
         raise OSError()
@@ -370,14 +398,16 @@ class ChunkedStream(object):
         Write buffer b to file, return number of bytes written.
 
         Only makes one system call, so not all of the data may be written.
-        The number of bytes actually written is returned.  In non-blocking mode,
+        The number of bytes actually written is returned.
+         In non-blocking mode,
         returns None if the write would block.
         """
         raise OSError()
 
     def __repr__(self):
         """ Return repr(self). """
-        return "ContentLengthStream({}/{})".format(self.bytes_read, self.length)
+        return "ContentLengthStream({}/{})".format(
+            self.bytes_read, self.length)
 
     @property
     def closefd(self):
