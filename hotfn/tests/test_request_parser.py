@@ -13,6 +13,8 @@
 #    under the License.
 
 import io
+import unittest
+
 import testtools
 
 from hotfn.http import request
@@ -37,7 +39,7 @@ class TestRequestParser(testtools.TestCase):
         self.assertIn("accept", headers)
         self.assertIn("user-agent", headers)
         self.assertEqual(("1", "1"), proto_version)
-        self.assertEqual(0, request_data.length)
+        self.assertEqual(0, len(request_data.read()))
         self.assertIn("something", params)
 
     def test_parse_no_query(self):
@@ -50,7 +52,7 @@ class TestRequestParser(testtools.TestCase):
         self.assertIn("accept", headers)
         self.assertIn("user-agent", headers)
         self.assertEqual(("1", "1"), proto_version)
-        self.assertEqual(0, request_data.length)
+        self.assertEqual(0, len(request_data.read()))
         self.assertEqual({}, params)
 
     def test_parse_data(self):
@@ -65,7 +67,7 @@ class TestRequestParser(testtools.TestCase):
         self.assertEqual("11", headers.get("content-length"))
         self.assertIn("user-agent", headers)
         self.assertEqual(("1", "1"), proto_version)
-        self.assertEqual("hello:hello", request_data.read().decode())
+        self.assertEqual("hello:hello", request_data.readall().decode())
         self.assertIn("something", params)
 
     def test_parse_data_with_fn_content_length(self):
@@ -73,5 +75,9 @@ class TestRequestParser(testtools.TestCase):
             data.request_with_fn_content_headers.encode("utf8")))
         (method, url, params, headers,
          proto_version, request_data) = req_parser.parse_raw_request()
-        self.assertEqual(request_data.length,
-                         int(headers.get("fn_header_content_length")))
+        self.assertEqual(len(request_data.read()),
+                         int(headers.get("content-length")))
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -29,6 +29,19 @@ def main(app):
                 try:
                     (method, url, dict_params,
                      headers, version, data) = rq.parse_raw_request()
+                except EOFError:
+                    # The Fn platform has closed stdin; there's no way to get additional work.
+                    return
+                except Exception:
+                    # A parsing error during the read of the HTTP header is unrecoverable;
+                    # there's no way to resynchronise with the incoming streams. We spit out an
+                    # error and bail out.
+                    print((hotfn.http.response.RawResponse(
+                        (1, 1), 500, "Unrecoverable problem reading the HTTP stream",
+                        {}, str(ex)).dump()), file=sys.stdout)
+                    return
+
+                try:
                     rs = normal_dispatch(app,
                                          method=method,
                                          url=url,
@@ -37,7 +50,10 @@ def main(app):
                                          version=version,
                                          data=data)
                     print(rs.dump(), file=sys.stdout, flush=True)
-                except (Exception, EOFError) as ex:
+                except DispatchException as ex:
+                    # If the user's raised an error containing an explicit response, use that
+                    print(ex.response().dump(), file=sys.stdout)
+                except Exception as ex:
                     traceback.print_exc(file=sys.stderr)
                     print((hotfn.http.response.RawResponse(
                         (1, 1), 500, "Internal Server Error",
@@ -84,16 +100,17 @@ def normal_dispatch(app, method=None, url=None,
 def coerce_input_to_content_type(f):
     def app(method=None, url=None, dict_params=None,
             headers=None, version=None, data=None):
-        content_type = headers.get("Content-Type")
+        # TODO: The content-type header has some internal structure; actually provide some parsing for that
+        content_type = headers.get("content-type")
         try:
             j = None
             if content_type == "application/json":
                 j = json.load(data)
-            if content_type in [
-                    "application/text",
-                    "application/x-www-form-urlencoded"]:
+            elif content_type in [
+                    "text/plain",
+                    ]:
                 j = data.readall().decode()
-            if j is None:
+            else:
                 j = data.readall().decode()
         except Exception as ex:
             raise DispatchException(
