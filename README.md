@@ -45,10 +45,11 @@ This type of class stands for HTTP request parsing to a sane structure of:
  - HTTP request body
 
 ```python
+import io
 import sys
 from hotfn.http import request
 
-req = request.RawRequest(sys.stdin.read())
+req = request.RawRequest(io.fdopen(0, 'rb'))
 method, url, query_parameters, headers, (major, minor), body = req.parse_raw_request()
 ```
 
@@ -58,14 +59,15 @@ Raw HTTP response
 This type of class stands for transforming HTTP request object into valid string representation
 
 ```python
-import sys
+import os
 from hotfn.http import request
 from hotfn.http import response
 
 req = request.RawRequest(sys.stdin.read())
 method, url, query_parameters, headers, (major, minor), body = req.parse_raw_request()
 resp = response.RawResponse((major, minor), 200, "OK", response_data=body)
-print(resp.dump())
+stdout = os.fdopen(1, 'wb')
+resp.dump(stdout)
 ```
 
 Example
@@ -99,7 +101,7 @@ Notes
 
 Please be aware that response object by default sets content type as `text/plain; charset=utf-8`. If you need to change it use following code:
 ```python
-import sys
+import os
 from hotfn.http import request
 from hotfn.http import response
 
@@ -107,6 +109,48 @@ req = request.RawRequest(sys.stdin.read())
 method, url, query_parameters, headers, (major, minor), body = req.parse_raw_request()
 resp = response.RawResponse((major, minor), 200, "OK", response_data=body)
 resp.headers["Content-Type"] = "application/json"
-print(resp.dump())
+stdout = os.fdopen(1, 'wb')
+resp.dump(stdout)
 
+```
+
+Handling Hot Functions
+----------------------
+
+A main loop is supplied that can repeatedly call a user function with a series of HTTP requests.
+(TODO: should this use the WSGI API?)
+
+In order to utilise this, you can write your `app.py` as follows:
+
+```python
+from hotfn.http import main, response
+
+
+def app(method, url, query_params, headers, proto, body_stream):
+    return response.RawResponse(proto, 200, "OK", body_stream.readall())
+
+
+if __name__ == "__main__":
+    main.main(app)
+```
+
+Automatic input coercions
+-------------------------
+
+Decorators are provided that will attempt to coerce input values to Python types.
+Some attempt is made to coerce return values from these functions also:
+
+```python
+from hotfn.http import main
+
+
+@main.coerce_input_to_content_type
+def app(s):
+    # s a string if text/plain
+    # s a python dictionary if application/json
+    return s
+
+
+if __name__ == "__main__":
+    main.main(app)
 ```

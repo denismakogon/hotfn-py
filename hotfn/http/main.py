@@ -23,41 +23,42 @@ import hotfn.http.response
 
 def main(app):
     if not os.isatty(sys.stdin.fileno()):
-        with open("/dev/stdin", 'rb') as stdin:
-            rq = hotfn.http.request.RawRequest(stdin)
-            while True:
-                try:
-                    (method, url, dict_params,
-                     headers, version, data) = rq.parse_raw_request()
-                except EOFError:
-                    # The Fn platform has closed stdin; there's no way to get additional work.
-                    return
-                except Exception:
-                    # A parsing error during the read of the HTTP header is unrecoverable;
-                    # there's no way to resynchronise with the incoming streams. We spit out an
-                    # error and bail out.
-                    print((hotfn.http.response.RawResponse(
-                        (1, 1), 500, "Unrecoverable problem reading the HTTP stream",
-                        {}, str(ex)).dump()), file=sys.stdout)
-                    return
+        with os.fdopen(0, 'rb') as stdin:  # /dev/stdin, etc, not necessarily available on all platforms (eg, Mac)
+            with os.fdopen(1, 'wb') as stdout:
+                rq = hotfn.http.request.RawRequest(stdin)
+                while True:
+                    try:
+                        (method, url, dict_params,
+                         headers, version, data) = rq.parse_raw_request()
+                    except EOFError:
+                        # The Fn platform has closed stdin; there's no way to get additional work.
+                        return
+                    except Exception:
+                        # A parsing error during the read of the HTTP header is unrecoverable;
+                        # there's no way to resynchronise with the incoming streams. We spit out an
+                        # error and bail out.
+                        hotfn.http.response.RawResponse(
+                            (1, 1), 500, "Unrecoverable problem reading the HTTP stream",
+                            {}, str(ex)).dump(stdout)
+                        return
 
-                try:
-                    rs = normal_dispatch(app,
-                                         method=method,
-                                         url=url,
-                                         dict_params=dict_params,
-                                         headers=headers,
-                                         version=version,
-                                         data=data)
-                    print(rs.dump(), file=sys.stdout, flush=True)
-                except DispatchException as ex:
-                    # If the user's raised an error containing an explicit response, use that
-                    print(ex.response().dump(), file=sys.stdout)
-                except Exception as ex:
-                    traceback.print_exc(file=sys.stderr)
-                    print((hotfn.http.response.RawResponse(
-                        (1, 1), 500, "Internal Server Error",
-                        {}, str(ex)).dump()), file=sys.stdout)
+                    try:
+                        rs = normal_dispatch(app,
+                                             method=method,
+                                             url=url,
+                                             dict_params=dict_params,
+                                             headers=headers,
+                                             version=version,
+                                             data=data)
+                        rs.dump(stdout)
+                    except DispatchException as ex:
+                        # If the user's raised an error containing an explicit response, use that
+                        ex.response().dump(sys.stdout)
+                    except Exception as ex:
+                        traceback.print_exc(file=sys.stderr)
+                        hotfn.http.response.RawResponse(
+                            (1, 1), 500, "Internal Server Error",
+                            {}, str(ex)).dump(stdout)
 
 
 class DispatchException(Exception):
@@ -84,6 +85,10 @@ def normal_dispatch(app, method=None, url=None,
             return rs
         elif isinstance(rs, str):
             return hotfn.http.response.RawResponse((1, 1), 200, 'OK', {}, rs)
+        elif isinstance(rs, bytes):
+            return hotfn.http.response.RawResponse(
+                (1, 1), 200, 'OK',
+                {'content-type': 'application/octet-stream'}, rs)
         else:
             return hotfn.http.response.RawResponse(
                 (1, 1), 200, 'OK',
