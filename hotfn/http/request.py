@@ -83,7 +83,8 @@ class RawRequest(object):
             self.body_stream.close()
 
         if self.stream is None:
-            # We received a request that was incorrectly framed, so had to consume all remaining input
+            # We received a request that was incorrectly framed,
+            # so had to consume all remaining input
             raise EOFError("Previous stream had no terminator")
 
         top_line = readline(self.stream)
@@ -121,7 +122,8 @@ class RawRequest(object):
                     "content-length", headers.get(
                         "fn_header_content_length", 0))))
         else:
-            # With no way of knowing when the input is complete, we must read everything remaining
+            # With no way of knowing when the input is complete,
+            # we must read everything remaining
             self.body_stream = self.stream
             self.stream = None
 

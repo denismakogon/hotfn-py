@@ -67,7 +67,9 @@ class RawResponse(object):
             "verbose_status": self.verbose_status,
             "headers": self.headers,
         }
-        result = stream.write(self.PATTERN.format(**format_map).encode('utf-8') + self.response_data)
+        result = stream.write(
+            self.PATTERN.format(**format_map).encode('utf-8') +
+            self.response_data)
         if flush:
             stream.flush()
         return result

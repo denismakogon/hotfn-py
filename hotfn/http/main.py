@@ -23,7 +23,8 @@ import hotfn.http.response
 
 def main(app):
     if not os.isatty(sys.stdin.fileno()):
-        with os.fdopen(0, 'rb') as stdin:  # /dev/stdin, etc, not necessarily available on all platforms (eg, Mac)
+        # /dev/stdin, etc, not necessarily available on all platforms (eg, Mac)
+        with os.fdopen(0, 'rb') as stdin:
             with os.fdopen(1, 'wb') as stdout:
                 rq = hotfn.http.request.RawRequest(stdin)
                 while True:
@@ -31,14 +32,17 @@ def main(app):
                         (method, url, dict_params,
                          headers, version, data) = rq.parse_raw_request()
                     except EOFError:
-                        # The Fn platform has closed stdin; there's no way to get additional work.
+                        # The Fn platform has closed stdin; there's no way to
+                        # get additional work.
                         return
-                    except Exception:
-                        # A parsing error during the read of the HTTP header is unrecoverable;
-                        # there's no way to resynchronise with the incoming streams. We spit out an
-                        # error and bail out.
+                    except Exception as ex:
+                        # A parsing error during the read of the HTTP header is
+                        # unrecoverable; there's no way to resynchronise with
+                        # the incoming streams. We spit out an error and
+                        # bail out.
                         hotfn.http.response.RawResponse(
-                            (1, 1), 500, "Unrecoverable problem reading the HTTP stream",
+                            (1, 1), 500,
+                            "Unrecoverable problem reading the HTTP stream",
                             {}, str(ex)).dump(stdout)
                         return
 
@@ -52,7 +56,8 @@ def main(app):
                                              data=data)
                         rs.dump(stdout)
                     except DispatchException as ex:
-                        # If the user's raised an error containing an explicit response, use that
+                        # If the user's raised an error containing an explicit
+                        # response, use that
                         ex.response().dump(sys.stdout)
                     except Exception as ex:
                         traceback.print_exc(file=sys.stderr)
@@ -105,15 +110,14 @@ def normal_dispatch(app, method=None, url=None,
 def coerce_input_to_content_type(f):
     def app(method=None, url=None, dict_params=None,
             headers=None, version=None, data=None):
-        # TODO: The content-type header has some internal structure; actually provide some parsing for that
+        # TODO(jang): The content-type header has some internal structure;
+        # actually provide some parsing for that
         content_type = headers.get("content-type")
         try:
             j = None
             if content_type == "application/json":
                 j = json.load(data)
-            elif content_type in [
-                    "text/plain",
-                    ]:
+            elif content_type in ["text/plain"]:
                 j = data.readall().decode()
             else:
                 j = data.readall().decode()
