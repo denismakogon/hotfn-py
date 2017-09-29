@@ -24,8 +24,8 @@ import hotfn.http.response
 def main(app):
     if not os.isatty(sys.stdin.fileno()):
         # /dev/stdin, etc, not necessarily available on all platforms (eg, Mac)
-        with os.fdopen(0, 'rb') as stdin:
-            with os.fdopen(1, 'wb') as stdout:
+        with os.fdopen(sys.stdin.fileno(), 'rb') as stdin:
+            with os.fdopen(sys.stdout.fileno(), 'wb') as stdout:
                 rq = hotfn.http.request.RawRequest(stdin)
                 while True:
                     try:
