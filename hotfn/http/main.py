@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import io
 import json
 import os
 import sys
@@ -116,11 +117,11 @@ def coerce_input_to_content_type(f):
         try:
             j = None
             if content_type == "application/json":
-                j = json.load(data)
+                j = json.load(io.TextIOWrapper(data))
             elif content_type in ["text/plain"]:
-                j = data.readall().decode()
+                j = io.TextIOWrapper(data).read()
             else:
-                j = data.readall().decode()
+                j = io.TextIOWrapper(data).read()
         except Exception as ex:
             raise DispatchException(
                 500, "Unexpected error: {}".format(str(ex)))
