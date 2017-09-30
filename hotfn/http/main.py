@@ -18,36 +18,20 @@ import os
 import sys
 import traceback
 
-import hotfn.http.request
-import hotfn.http.response
+from hotfn.http import errors
+from hotfn.http import request
+from hotfn.http import response
 
 
 def main(app):
     if not os.isatty(sys.stdin.fileno()):
-        # /dev/stdin, etc, not necessarily available on all platforms (eg, Mac)
         with os.fdopen(sys.stdin.fileno(), 'rb') as stdin:
             with os.fdopen(sys.stdout.fileno(), 'wb') as stdout:
-                rq = hotfn.http.request.RawRequest(stdin)
+                rq = request.RawRequest(stdin)
                 while True:
                     try:
                         (method, url, dict_params,
                          headers, version, data) = rq.parse_raw_request()
-                    except EOFError:
-                        # The Fn platform has closed stdin; there's no way to
-                        # get additional work.
-                        return
-                    except Exception as ex:
-                        # A parsing error during the read of the HTTP header is
-                        # unrecoverable; there's no way to resynchronise with
-                        # the incoming streams. We spit out an error and
-                        # bail out.
-                        hotfn.http.response.RawResponse(
-                            (1, 1), 500,
-                            "Unrecoverable problem reading the HTTP stream",
-                            {}, str(ex)).dump(stdout)
-                        return
-
-                    try:
                         rs = normal_dispatch(app,
                                              method=method,
                                              url=url,
@@ -56,31 +40,35 @@ def main(app):
                                              version=version,
                                              data=data)
                         rs.dump(stdout)
-                    except DispatchException as ex:
+                    except EOFError:
+                        # The Fn platform has closed stdin; there's no way to
+                        # get additional work.
+                        return
+                    except errors.DispatchException as ex:
                         # If the user's raised an error containing an explicit
                         # response, use that
-                        ex.response().dump(sys.stdout)
+                        ex.response().dump(stdout)
                     except Exception as ex:
                         traceback.print_exc(file=sys.stderr)
-                        hotfn.http.response.RawResponse(
+                        response.RawResponse(
                             (1, 1), 500, "Internal Server Error",
                             {}, str(ex)).dump(stdout)
-
-
-# TODO(denismakogon): add HTTP version, headers, etc.
-class DispatchException(Exception):
-    def __init__(self, status, message):
-        self.status = status
-        self.message = message
-
-    def response(self):
-        return hotfn.http.response.RawResponse(
-            (1, 1), self.status, 'ERROR', {}, self.message)
 
 
 def normal_dispatch(app, method=None, url=None,
                     dict_params=None, headers=None,
                     version=None, data=None):
+    """
+
+    :param app:
+    :param method:
+    :param url:
+    :param dict_params:
+    :param headers:
+    :param version:
+    :param data:
+    :return:
+    """
     try:
         rs = app(method=method,
                  url=url,
@@ -88,23 +76,23 @@ def normal_dispatch(app, method=None, url=None,
                  headers=headers,
                  version=version,
                  data=data)
-        if isinstance(rs, hotfn.http.response.RawResponse):
+        if isinstance(rs, response.RawResponse):
             return rs
         elif isinstance(rs, str):
-            return hotfn.http.response.RawResponse((1, 1), 200, 'OK', {}, rs)
+            return response.RawResponse((1, 1), 200, 'OK', {}, rs)
         elif isinstance(rs, bytes):
-            return hotfn.http.response.RawResponse(
+            return response.RawResponse(
                 (1, 1), 200, 'OK',
                 {'content-type': 'application/octet-stream'},
                 rs.decode("utf8"))
         else:
-            return hotfn.http.response.RawResponse(
+            return response.RawResponse(
                 (1, 1), 200, 'OK',
                 {'content-type': 'application/json'}, json.dumps(rs))
-    except DispatchException as e:
+    except errors.DispatchException as e:
         return e.response()
     except Exception as e:
-        return hotfn.http.response.RawResponse(
+        return response.RawResponse(
             (1, 1), 500, 'ERROR', {}, str(e))
 
 
@@ -113,11 +101,20 @@ def normal_dispatch(app, method=None, url=None,
 def coerce_input_to_content_type(f):
     def app(method=None, url=None, dict_params=None,
             headers=None, version=None, data=None):
+        """
+
+        :param method:
+        :param url:
+        :param dict_params:
+        :param headers:
+        :param version:
+        :param data:
+        :return:
+        """
         # TODO(jang): The content-type header has some internal structure;
         # actually provide some parsing for that
         content_type = headers.get("content-type")
         try:
-            j = None
             request_body = io.TextIOWrapper(data)
             # TODO(denismakogon): XML type to add
             if content_type == "application/json":
@@ -127,7 +124,7 @@ def coerce_input_to_content_type(f):
             else:
                 j = request_body.read()
         except Exception as ex:
-            raise DispatchException(
+            raise errors.DispatchException(
                 500, "Unexpected error: {}".format(str(ex)))
         return f(j)
     return app

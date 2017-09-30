@@ -14,6 +14,8 @@
 
 import urllib.parse
 
+from hotfn.http import errors
+
 
 def readline(stream):
     """Read a line up until the \r\n termination
@@ -45,7 +47,7 @@ class RawRequest(object):
         """
         Raw request constructor
         :param stream: byte stream
-        :type stream: io.BytesIO
+        :type stream: io.FileIO[bytes]
         """
         self.stream = stream
         self.body_stream = None
@@ -92,47 +94,51 @@ class RawRequest(object):
             # so had to consume all remaining input
             raise EOFError("Previous stream had no terminator")
 
-        top_line = readline(self.stream)
-        if len(top_line) == 0:
-            raise EOFError("No request supplied")
-        method, path, proto = top_line.rstrip().split(' ')
-        headers = {}
-        while True:
-            line = readline(self.stream).rstrip()
-            if len(line) == 0:
-                break
-            k, v = line.split(':', 1)
-            k = k.lower()
-            if k.startswith('fn_header_'):
-                k = k[len('fn_header_'):].replace('_', '-')
-            if k.lower() in headers:
-                headers[k.lower()] += ';' + v.strip()
+        try:
+            top_line = readline(self.stream)
+            if len(top_line) == 0:
+                raise EOFError("No request supplied")
+            method, path, proto = top_line.rstrip().split(' ')
+            headers = {}
+            while True:
+                line = readline(self.stream).rstrip()
+                if len(line) == 0:
+                    break
+                k, v = line.split(':', 1)
+                k = k.lower()
+                if k.startswith('fn_header_'):
+                    k = k[len('fn_header_'):].replace('_', '-')
+                if k.lower() in headers:
+                    headers[k.lower()] += ';' + v.strip()
+                else:
+                    headers[k.lower()] = v.strip()
+
+            major_minor = proto.upper().replace("HTTP/", "").split(".")
+            if len(major_minor) > 1:
+                major, minor = major_minor
             else:
-                headers[k.lower()] = v.strip()
+                major, minor = major_minor.pop(), "0"
 
-        major_minor = proto.upper().replace("HTTP/", "").split(".")
-        if len(major_minor) > 1:
-            major, minor = major_minor
-        else:
-            major, minor = major_minor.pop(), "0"
+            # todo: parse query parameters carefully
+            params = parse_query_params(path)
 
-        # todo: parse query parameters carefully
-        params = parse_query_params(path)
+            if headers.get('transfer-encoding', 'identity') == 'chunked':
+                self.body_stream = ChunkedStream(self.stream)
+            elif 'content-length' in headers:
+                self.body_stream = ContentLengthStream(
+                    self.stream, int(headers.get(
+                        "content-length", headers.get(
+                            "fn_header_content_length", 0))))
+            else:
+                # With no way of knowing when the input is complete,
+                # we must read everything remaining
+                self.body_stream = self.stream
+                self.stream = None
 
-        if headers.get('transfer-encoding', 'identity') == 'chunked':
-            self.body_stream = ChunkedStream(self.stream)
-        elif 'content-length' in headers:
-            self.body_stream = ContentLengthStream(
-                self.stream, int(headers.get(
-                    "content-length", headers.get(
-                        "fn_header_content_length", 0))))
-        else:
-            # With no way of knowing when the input is complete,
-            # we must read everything remaining
-            self.body_stream = self.stream
-            self.stream = None
-
-        return method, path, params, headers, (major, minor), self.body_stream
+            return (method, path, params, headers,
+                    (major, minor), self.body_stream)
+        except ValueError:
+            raise errors.DispatchException(500, "No request supplied")
 
 
 def parse_query_params(url):
