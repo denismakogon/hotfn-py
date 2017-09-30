@@ -135,8 +135,9 @@ class RawRequest(object):
                 self.body_stream = self.stream
                 self.stream = None
 
-            return method, path, params, headers, (major, minor), self.body_stream
-        except ValueError as _:
+            return (method, path, params, headers,
+                    (major, minor), self.body_stream)
+        except ValueError:
             raise errors.DispatchException(500, "No request supplied")
 
 
