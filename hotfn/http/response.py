@@ -69,7 +69,7 @@ class RawResponse(object):
         }
         result = stream.write(
             self.PATTERN.format(**format_map).encode('utf-8') +
-            self.response_data)
+            self.response_data + "\n".encode("utf-8"))
         if flush:
             stream.flush()
         return result
