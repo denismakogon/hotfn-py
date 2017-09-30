@@ -67,6 +67,7 @@ def main(app):
                             {}, str(ex)).dump(stdout)
 
 
+# TODO(denismakogon): add HTTP version, headers, etc.
 class DispatchException(Exception):
     def __init__(self, status, message):
         self.status = status
@@ -94,7 +95,8 @@ def normal_dispatch(app, method=None, url=None,
         elif isinstance(rs, bytes):
             return hotfn.http.response.RawResponse(
                 (1, 1), 200, 'OK',
-                {'content-type': 'application/octet-stream'}, rs)
+                {'content-type': 'application/octet-stream'},
+                rs.decode("utf8"))
         else:
             return hotfn.http.response.RawResponse(
                 (1, 1), 200, 'OK',
@@ -116,12 +118,14 @@ def coerce_input_to_content_type(f):
         content_type = headers.get("content-type")
         try:
             j = None
+            request_body = io.TextIOWrapper(data)
+            # TODO(denismakogon): XML type to add
             if content_type == "application/json":
-                j = json.load(io.TextIOWrapper(data))
+                j = json.load(request_body)
             elif content_type in ["text/plain"]:
-                j = io.TextIOWrapper(data).read()
+                j = request_body.read()
             else:
-                j = io.TextIOWrapper(data).read()
+                j = request_body.read()
         except Exception as ex:
             raise DispatchException(
                 500, "Unexpected error: {}".format(str(ex)))

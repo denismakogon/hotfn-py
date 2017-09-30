@@ -13,7 +13,6 @@
 #    under the License.
 
 import io
-import unittest
 
 import testtools
 
@@ -77,7 +76,3 @@ class TestRequestParser(testtools.TestCase):
          proto_version, request_data) = req_parser.parse_raw_request()
         self.assertEqual(len(request_data.read()),
                          int(headers.get("content-length")))
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -45,12 +45,14 @@ This type of class stands for HTTP request parsing to a sane structure of:
  - HTTP request body
 
 ```python
-import io
+import os
 import sys
+
 from hotfn.http import request
 
-req = request.RawRequest(io.fdopen(0, 'rb'))
-method, url, query_parameters, headers, (major, minor), body = req.parse_raw_request()
+with os.fdopen(sys.stdin.fileno(), 'rb') as stdin:
+    req = request.RawRequest(stdin)
+    method, url, query_parameters, headers, (major, minor), body = req.parse_raw_request()
 ```
 
 Raw HTTP response
@@ -59,15 +61,18 @@ Raw HTTP response
 This type of class stands for transforming HTTP request object into valid string representation
 
 ```python
+import sys
 import os
+
 from hotfn.http import request
 from hotfn.http import response
 
-req = request.RawRequest(sys.stdin.read())
-method, url, query_parameters, headers, (major, minor), body = req.parse_raw_request()
-resp = response.RawResponse((major, minor), 200, "OK", response_data=body)
-stdout = os.fdopen(1, 'wb')
-resp.dump(stdout)
+with os.fdopen(sys.stdin.fileno(), 'rb') as stdin:
+    req = request.RawRequest(stdin)
+    method, url, query_parameters, headers, (major, minor), body = req.parse_raw_request()
+    resp = response.RawResponse((major, minor), 200, "OK", response_data=body)
+    with os.fdopen(sys.stdout.fileno(), 'wb') as stdout:
+        resp.dump(stdout)
 ```
 
 Example
@@ -102,15 +107,18 @@ Notes
 Please be aware that response object by default sets content type as `text/plain; charset=utf-8`. If you need to change it use following code:
 ```python
 import os
+import sys
+
 from hotfn.http import request
 from hotfn.http import response
 
-req = request.RawRequest(sys.stdin.read())
-method, url, query_parameters, headers, (major, minor), body = req.parse_raw_request()
-resp = response.RawResponse((major, minor), 200, "OK", response_data=body)
-resp.headers["Content-Type"] = "application/json"
-stdout = os.fdopen(1, 'wb')
-resp.dump(stdout)
+with os.fdopen(sys.stdin.fileno(), 'rb') as stdin:
+    req = request.RawRequest(stdin)
+    method, url, query_parameters, headers, (major, minor), body = req.parse_raw_request()
+    resp = response.RawResponse((major, minor), 200, "OK", response_data=body)
+    resp.headers["Content-Type"] = "application/json"
+    with os.fdopen(sys.stdout.fileno(), 'wb') as stdout:
+        resp.dump(stdout)
 
 ```
 
@@ -123,7 +131,8 @@ A main loop is supplied that can repeatedly call a user function with a series o
 In order to utilise this, you can write your `app.py` as follows:
 
 ```python
-from hotfn.http import main, response
+from hotfn.http import main
+from hotfn.http import response
 
 
 def app(method, url, query_params, headers, proto, body_stream):
@@ -132,6 +141,7 @@ def app(method, url, query_params, headers, proto, body_stream):
 
 if __name__ == "__main__":
     main.main(app)
+
 ```
 
 Automatic input coercions
@@ -146,11 +156,13 @@ from hotfn.http import main
 
 @main.coerce_input_to_content_type
 def app(s):
-    # s a string if text/plain
-    # s a python dictionary if application/json
+    """
+    s is a request body, it's type depends on content type
+    """
     return s
 
 
 if __name__ == "__main__":
     main.main(app)
+
 ```

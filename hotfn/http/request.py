@@ -42,6 +42,11 @@ def readline(stream):
 class RawRequest(object):
 
     def __init__(self, stream):
+        """
+        Raw request constructor
+        :param stream: byte stream
+        :type stream: io.BytesIO
+        """
         self.stream = stream
         self.body_stream = None
 
@@ -131,6 +136,12 @@ class RawRequest(object):
 
 
 def parse_query_params(url):
+    """
+    Parses query parameters
+    :param url: request URL
+    :type url: str
+    :return:
+    """
     q = url.split('?')
     if len(q) < 2:
         return {}
@@ -138,7 +149,15 @@ def parse_query_params(url):
 
 
 class ContentLengthStream(object):
+
     def __init__(self, base_stream, length):
+        """
+        Request body content stream
+        :param base_stream: byte stream
+        :type base_stream: io.BytesIO
+        :param length: content length from request headers
+        :type length: int
+        """
         self.base_stream = base_stream
         self.length = length
         self.bytes_read = 0
@@ -176,7 +195,9 @@ class ContentLengthStream(object):
         return val
 
     def readable(self):
-        """ True if file was opened in a read mode. """
+        """
+        True if file was opened in a read mode.
+        """
         return True
 
     def readall(self, *args, **kwargs):
@@ -277,6 +298,11 @@ class ChunkedStream(object):
     its length is zero.
     """
     def __init__(self, base_stream):
+        """
+        Chunked stream reader
+        :param base_stream: byte stream
+        :type base_stream: io.BytesIO
+        """
         self.base_stream = base_stream
         self.closed = False
         self.eof = False
@@ -416,7 +442,9 @@ class ChunkedStream(object):
         raise OSError()
 
     def writable(self):
-        """ True if file was opened in a write mode. """
+        """
+        True if file was opened in a write mode
+        """
         return False
 
     def write(self):
@@ -430,17 +458,16 @@ class ChunkedStream(object):
         """
         raise OSError()
 
-    def __repr__(self):
-        """ Return repr(self). """
-        return "ContentLengthStream({}/{})".format(
-            self.bytes_read, self.length)
-
     @property
     def closefd(self):
-        """True if the file descriptor will be closed by close()."""
+        """
+        True if the file descriptor will be closed by close()
+        """
         return False
 
     @property
     def mode(self):
-        """String giving the file mode"""
+        """
+        String giving the file mode
+        """
         return "rb"
