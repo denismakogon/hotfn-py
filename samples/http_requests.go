@@ -29,7 +29,7 @@ func createRequest(data string) {
 			"Host": []string{"localhost:8080"},
 			"User-Agent": []string{"curl/7.51.0"},
 			"Content-Length": []string{strconv.Itoa(len(data))},
-			"Content-Type": []string{"application/x-www-form-urlencoded"},
+			"Content-Type": []string{"application/text"},
 		},
 		ContentLength: int64(len(data)),
 		Host: "localhost:8080",

@@ -40,7 +40,7 @@ func createRequest(data string) {
 	if err != nil {
 		fmt.Println(fmt.Sprintf("Error %v", err))
 	}
-	fmt.Println(string(raw))
+	fmt.Print(string(raw))
 }
 
 

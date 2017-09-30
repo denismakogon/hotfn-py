@@ -16,8 +16,7 @@
 class RawResponse(object):
     PATTERN = ("HTTP/{proto_major}.{proto_minor} "
                "{int_status} {verbose_status}\r\n"
-               "{headers}"
-               "{response_data}")
+               "{headers}")
 
     def __init__(self, http_proto_version, status_code, verbose_status,
                  http_headers=None, response_data=None):
@@ -55,15 +54,22 @@ class RawResponse(object):
         return ""
 
     def __encode_data(self, data):
-        return data + "\r\n" if data else "", len(data) if data else 0
+        if isinstance(data, bytes):
+            return data, len(data)
+        enc = str(data).encode('utf-8')
+        return enc, len(enc)
 
-    def dump(self):
+    def dump(self, stream, flush=True):
         format_map = {
             "proto_major": self.http_proto[0],
             "proto_minor": self.http_proto[1],
             "int_status": self.int_status,
             "verbose_status": self.verbose_status,
             "headers": self.headers,
-            "response_data": self.response_data,
         }
-        return self.PATTERN.format(**format_map)
+        result = stream.write(
+            self.PATTERN.format(**format_map).encode('utf-8') +
+            self.response_data)
+        if flush:
+            stream.flush()
+        return result
