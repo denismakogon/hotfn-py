@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import urllib.parse
+
 
 def readline(stream):
     """Read a line up until the \r\n termination
@@ -80,6 +82,11 @@ class RawRequest(object):
             # Consume any of the remainder of a previous request
             self.body_stream.close()
 
+        if self.stream is None:
+            # We received a request that was incorrectly framed,
+            # so had to consume all remaining input
+            raise EOFError("Previous stream had no terminator")
+
         top_line = readline(self.stream)
         if len(top_line) == 0:
             raise EOFError("No request supplied")
@@ -90,6 +97,9 @@ class RawRequest(object):
             if len(line) == 0:
                 break
             k, v = line.split(':', 1)
+            k = k.lower()
+            if k.startswith('fn_header_'):
+                k = k[len('fn_header_'):].replace('_', '-')
             if k.lower() in headers:
                 headers[k.lower()] += ';' + v.strip()
             else:
@@ -102,15 +112,29 @@ class RawRequest(object):
             major, minor = major_minor.pop(), "0"
 
         # todo: parse query parameters carefully
+        params = parse_query_params(path)
+
         if headers.get('transfer-encoding', 'identity') == 'chunked':
             self.body_stream = ChunkedStream(self.stream)
-        else:
+        elif 'content-length' in headers:
             self.body_stream = ContentLengthStream(
                 self.stream, int(headers.get(
                     "content-length", headers.get(
                         "fn_header_content_length", 0))))
+        else:
+            # With no way of knowing when the input is complete,
+            # we must read everything remaining
+            self.body_stream = self.stream
+            self.stream = None
 
-        return method, path, {}, headers, (major, minor), self.body_stream
+        return method, path, params, headers, (major, minor), self.body_stream
+
+
+def parse_query_params(url):
+    q = url.split('?')
+    if len(q) < 2:
+        return {}
+    return urllib.parse.parse_qs(q[1], keep_blank_values=True)
 
 
 class ContentLengthStream(object):
@@ -167,6 +191,8 @@ class ContentLengthStream(object):
         val = bytes()
         while self.bytes_read < self.length:
             more = self.read()
+            if more == b'':
+                break
             val += more
         return val
 

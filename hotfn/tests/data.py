@@ -17,8 +17,9 @@ request_with_query_and_data = """GET /v1/apps?something=something&etc=etc HTTP/1
 Host: localhost:8080\r
 Content-Length: 11\r
 Content-Type: application/x-www-form-urlencoded\r
-User-Agent: curl/7.51.0
-\r\nhello:hello
+User-Agent: curl/7.51.0\r
+\r
+hello:hello
 """
 
 
