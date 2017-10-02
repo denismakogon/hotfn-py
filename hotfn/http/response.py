@@ -39,9 +39,12 @@ class RawResponse(object):
         self.verbose_status = verbose_status
         self.response_data, content_len = self.__encode_data(response_data)
         if self.response_data:
+            if not http_headers.get("Content-Type"):
+                http_headers.update({
+                    "Content-Type": "text/plain; charset=utf-8",
+                })
             http_headers.update({
                 "Content-Length": content_len,
-                "Content-Type": "text/plain; charset=utf-8",
             })
         self.headers = self.__encode_headers(http_headers)
 

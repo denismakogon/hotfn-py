@@ -17,6 +17,33 @@ import urllib.parse
 from hotfn.http import errors
 
 
+class RequestContext(object):
+
+    def __init__(self, method=None, url=None,
+                 query_parameters=None, headers=None,
+                 version=None):
+        """
+        Request context here to be a placeholder
+        for request-specific attributes
+        :param method: HTTP request method
+        :type method: str
+        :param url: HTTP request URL
+        :type url: str
+        :param query_parameters: HTTP request query parameters
+        :type query_parameters: dict
+        :param headers: HTTP request headers
+        :type headers: dict
+        :param version: HTTP proto version
+        :type version: tuple
+        """
+        # TODO(xxx): app name, path, memory, type, config
+        self.method = method
+        self.url = url
+        self.query_parameters = query_parameters
+        self.headers = headers
+        self.version = version
+
+
 def readline(stream):
     """Read a line up until the \r\n termination
 
@@ -47,7 +74,7 @@ class RawRequest(object):
         """
         Raw request constructor
         :param stream: byte stream
-        :type stream: io.FileIO[bytes]
+        :type stream: io.BytesIO[bytes]
         """
         self.stream = stream
         self.body_stream = None
@@ -126,17 +153,21 @@ class RawRequest(object):
                 self.body_stream = ChunkedStream(self.stream)
             elif 'content-length' in headers:
                 self.body_stream = ContentLengthStream(
-                    self.stream, int(headers.get(
-                        "content-length", headers.get(
-                            "fn_header_content_length", 0))))
+                    self.stream, int(headers.get("content-length")))
             else:
                 # With no way of knowing when the input is complete,
                 # we must read everything remaining
                 self.body_stream = self.stream
                 self.stream = None
 
-            return (method, path, params, headers,
-                    (major, minor), self.body_stream)
+            context = RequestContext(
+                method=method,
+                url=path,
+                query_parameters=params,
+                headers=headers,
+                version=(major, minor))
+
+            return context, self.body_stream
         except ValueError:
             raise errors.DispatchException(500, "No request supplied")
 

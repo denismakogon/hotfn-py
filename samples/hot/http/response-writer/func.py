@@ -13,11 +13,28 @@
 #    under the License.
 
 from hotfn.http import main
+from hotfn.http import response
 
 
 @main.coerce_input_to_content_type
-def app(s):
-    return s
+def app(context, data):
+    """
+    This is just an echo function
+    :param context: request context
+    :type context: hotfn.http.request.RequestContext
+    :param data: request body
+    :type data: object
+    :return: echo of request body
+    :rtype: object
+    """
+    headers = {
+        "Content-Type": "plain/text",
+    }
+    response.RawResponse(
+        context.version, 200, "OK",
+        http_headers=headers,
+        response_data="OK")
+    return data
 
 
 if __name__ == "__main__":

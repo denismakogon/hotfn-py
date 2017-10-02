@@ -16,12 +16,14 @@ class JSONProtocol(asyncio.Protocol):
                   file=sys.stderr, flush=True)
             dict_data = json.loads(data.decode())
             body_obj = dict_data['body']
-            print("body type: {}".format(type(body_obj)), file=sys.stderr, flush=True)
+            print("body type: {}".format(type(body_obj)),
+                  file=sys.stderr, flush=True)
             if isinstance(body_obj, str):
                 body = json.loads(body_obj)
             else:
                 body = body_obj
-            print("body loaded: {}".format(body), file=sys.stderr, flush=True)
+            print("body loaded: {}".format(body),
+                  file=sys.stderr, flush=True)
             inner = json.dumps({
                 "data": body['data'],
             })

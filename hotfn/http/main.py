@@ -12,11 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import functools
 import io
 import json
 import os
 import sys
+
 import traceback
+
 
 from hotfn.http import errors
 from hotfn.http import request
@@ -24,21 +27,20 @@ from hotfn.http import response
 
 
 def main(app):
+    """
+    Request handler app dispatcher entry point
+    :param app: request handler app
+    :type app: types.Callable
+    :return: None
+    """
     if not os.isatty(sys.stdin.fileno()):
         with os.fdopen(sys.stdin.fileno(), 'rb') as stdin:
             with os.fdopen(sys.stdout.fileno(), 'wb') as stdout:
                 rq = request.RawRequest(stdin)
                 while True:
                     try:
-                        (method, url, dict_params,
-                         headers, version, data) = rq.parse_raw_request()
-                        rs = normal_dispatch(app,
-                                             method=method,
-                                             url=url,
-                                             dict_params=dict_params,
-                                             headers=headers,
-                                             version=version,
-                                             data=data)
+                        context, data = rq.parse_raw_request()
+                        rs = normal_dispatch(app, context, data=data)
                         rs.dump(stdout)
                     except EOFError:
                         # The Fn platform has closed stdin; there's no way to
@@ -55,76 +57,71 @@ def main(app):
                             {}, str(ex)).dump(stdout)
 
 
-def normal_dispatch(app, method=None, url=None,
-                    dict_params=None, headers=None,
-                    version=None, data=None):
+def normal_dispatch(app, context, data=None):
     """
-
-    :param app:
-    :param method:
-    :param url:
-    :param dict_params:
-    :param headers:
-    :param version:
-    :param data:
-    :return:
+    Request handler app dispatcher
+    :param app: request handler app
+    :type app: types.Callable
+    :param context: request context
+    :type context: request.RequestContext
+    :param data: request body
+    :type data: io.BufferedIOBase
+    :return: raw response
+    :rtype: response.RawResponse
     """
     try:
-        rs = app(method=method,
-                 url=url,
-                 dict_params=dict_params,
-                 headers=headers,
-                 version=version,
-                 data=data)
+        rs = app(context, data=data)
         if isinstance(rs, response.RawResponse):
             return rs
         elif isinstance(rs, str):
-            return response.RawResponse((1, 1), 200, 'OK', {}, rs)
+            return response.RawResponse(context.version, 200, 'OK', {}, rs)
         elif isinstance(rs, bytes):
             return response.RawResponse(
-                (1, 1), 200, 'OK',
+                context.version, 200, 'OK',
                 {'content-type': 'application/octet-stream'},
                 rs.decode("utf8"))
         else:
             return response.RawResponse(
-                (1, 1), 200, 'OK',
+                context.version, 200, 'OK',
                 {'content-type': 'application/json'}, json.dumps(rs))
     except errors.DispatchException as e:
         return e.response()
     except Exception as e:
         return response.RawResponse(
-            (1, 1), 500, 'ERROR', {}, str(e))
+            context.version, 500, 'ERROR', {}, str(e))
 
 
-# TODO(denismakogon): this really should be content-type based decorator
-# TODO(denismakogon): mode content types to add
 def coerce_input_to_content_type(f):
-    def app(method=None, url=None, dict_params=None,
-            headers=None, version=None, data=None):
-        """
 
-        :param method:
-        :param url:
-        :param dict_params:
-        :param headers:
-        :param version:
-        :param data:
+    @functools.wraps(f)
+    def app(context, data=None):
+        """
+        Request handler app dispatcher decorator
+        :param context: request context
+        :type context: request.RequestContext
+        :param data: request body
+        :type data: io.BufferedIOBase
+        :return: raw response
+        :rtype: response.RawResponse
         :return:
         """
         # TODO(jang): The content-type header has some internal structure;
         # actually provide some parsing for that
-        content_type = headers.get("content-type")
+        content_type = context.headers.get("content-type")
         try:
             request_body = io.TextIOWrapper(data)
             # TODO(denismakogon): XML type to add
             if content_type == "application/json":
-                j = json.load(request_body)
+                body = json.load(request_body)
             elif content_type in ["text/plain"]:
-                j = request_body.read()
+                body = request_body.read()
             else:
-                j = request_body.read()
+                body = request_body.read()
         except Exception as ex:
             raise errors.DispatchException(
                 500, "Unexpected error: {}".format(str(ex)))
-        return f(j)
+
+        # this is user's request handler
+        return f(context, body)
+
     return app
