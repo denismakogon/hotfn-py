@@ -12,22 +12,23 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from hotfn.http import main
+from hotfn.http import worker
 
 
-@main.coerce_input_to_content_type
-def app(context, data):
+@worker.coerce_input_to_content_type
+def app(context, **kwargs):
     """
     This is just an echo function
     :param context: request context
     :type context: hotfn.http.request.RequestContext
-    :param data: request body
-    :type data: object
+    :param kwargs: contains request body by `data` key,
+    in case of coroutine contains event loop by `loop` key
+    :type kwargs: dict
     :return: echo of request body
     :rtype: object
     """
-    return data
+    return kwargs.get("data")
 
 
 if __name__ == "__main__":
-    main.main(app)
+    worker.run(app)
