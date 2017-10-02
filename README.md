@@ -135,8 +135,8 @@ from hotfn.http import main
 from hotfn.http import response
 
 
-def app(method, url, query_params, headers, proto, body_stream):
-    return response.RawResponse(proto, 200, "OK", body_stream.readall())
+def app(context, body):
+    return response.RawResponse(context.version, 200, "OK", body.readall())
 
 
 if __name__ == "__main__":
@@ -155,11 +155,11 @@ from hotfn.http import main
 
 
 @main.coerce_input_to_content_type
-def app(s):
+def app(context, body):
     """
-    s is a request body, it's type depends on content type
+    body is a request body, it's type depends on content type
     """
-    return s
+    return body
 
 
 if __name__ == "__main__":
