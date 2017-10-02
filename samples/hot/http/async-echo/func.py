@@ -12,12 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import asyncio
+
 from hotfn.http import response
 from hotfn.http import worker
 
 
 @worker.coerce_input_to_content_type
-def app(context, **kwargs):
+async def app(context, **kwargs):
     """
     This is just an echo function
     :param context: request context
@@ -31,12 +33,12 @@ def app(context, **kwargs):
     headers = {
         "Content-Type": "plain/text",
     }
-    rs = response.RawResponse(
+    return response.RawResponse(
         context.version, 200, "OK",
         http_headers=headers,
         response_data="OK")
-    return rs
 
 
 if __name__ == "__main__":
-    worker.run(app)
+    loop = asyncio.get_event_loop()
+    worker.run(app, loop=loop)

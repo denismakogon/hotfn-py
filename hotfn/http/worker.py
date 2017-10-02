@@ -17,6 +17,7 @@ import io
 import json
 import os
 import sys
+import types
 
 import traceback
 
@@ -26,11 +27,13 @@ from hotfn.http import request
 from hotfn.http import response
 
 
-def main(app):
+def run(app, loop=None):
     """
     Request handler app dispatcher entry point
     :param app: request handler app
     :type app: types.Callable
+    :param loop: asyncio event loop
+    :type loop: asyncio.AbstractEventLoop
     :return: None
     """
     if not os.isatty(sys.stdin.fileno()):
@@ -40,7 +43,8 @@ def main(app):
                 while True:
                     try:
                         context, data = rq.parse_raw_request()
-                        rs = normal_dispatch(app, context, data=data)
+                        rs = normal_dispatch(app, context,
+                                             data=data, loop=loop)
                         rs.dump(stdout)
                     except EOFError:
                         # The Fn platform has closed stdin; there's no way to
@@ -57,7 +61,7 @@ def main(app):
                             {}, str(ex)).dump(stdout)
 
 
-def normal_dispatch(app, context, data=None):
+def normal_dispatch(app, context, data=None, loop=None):
     """
     Request handler app dispatcher
     :param app: request handler app
@@ -66,13 +70,17 @@ def normal_dispatch(app, context, data=None):
     :type context: request.RequestContext
     :param data: request body
     :type data: io.BufferedIOBase
+    :param loop: asyncio event loop
+    :type loop: asyncio.AbstractEventLoop
     :return: raw response
     :rtype: response.RawResponse
     """
     try:
-        rs = app(context, data=data)
+        rs = app(context, data=data, loop=loop)
         if isinstance(rs, response.RawResponse):
             return rs
+        elif isinstance(rs, types.CoroutineType):
+            return loop.run_until_complete(rs)
         elif isinstance(rs, str):
             return response.RawResponse(context.version, 200, 'OK', {}, rs)
         elif isinstance(rs, bytes):
@@ -91,16 +99,18 @@ def normal_dispatch(app, context, data=None):
             context.version, 500, 'ERROR', {}, str(e))
 
 
-def coerce_input_to_content_type(f):
+def coerce_input_to_content_type(request_data_processor):
 
-    @functools.wraps(f)
-    def app(context, data=None):
+    @functools.wraps(request_data_processor)
+    def app(context, data=None, loop=None):
         """
         Request handler app dispatcher decorator
         :param context: request context
         :type context: request.RequestContext
         :param data: request body
         :type data: io.BufferedIOBase
+        :param loop: asyncio event loop
+        :type loop: asyncio.AbstractEventLoop
         :return: raw response
         :rtype: response.RawResponse
         :return:
@@ -121,7 +131,6 @@ def coerce_input_to_content_type(f):
             raise errors.DispatchException(
                 500, "Unexpected error: {}".format(str(ex)))
 
-        # this is user's request handler
-        return f(context, body)
+        return request_data_processor(context, data=body, loop=loop)
 
     return app
