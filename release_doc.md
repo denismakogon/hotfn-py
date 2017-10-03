@@ -49,7 +49,7 @@ Build distribution package
 
 Steps::
 
-    python setup.py bdist_wheel
+    python setup.py stdist bdist_wheel
 
 
 Check install capability for the whell
