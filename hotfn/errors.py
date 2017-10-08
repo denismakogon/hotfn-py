@@ -22,7 +22,7 @@ class HTTPDispatchException(Exception):
 
     def __init__(self, status, message):
         """
-
+        HTTP response with error
         :param status: HTTP status code
         :param message: error message
         """
@@ -38,7 +38,7 @@ class JSONDispatchException(Exception):
 
     def __init__(self, status, message):
         """
-
+        JSON response with error
         :param status: HTTP status code
         :param message: error message
         """

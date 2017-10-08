@@ -21,6 +21,12 @@ from hotfn import headers as http_headers
 class RawResponse(object):
 
     def __init__(self, data, headers=None, status_code=200):
+        """
+        JSON response object
+        :param data: JSON response data
+        :param headers: JSON response HTTP headers
+        :param status_code: JSON response HTTP status code
+        """
         self.status_code = status_code
         self.body = data
         if headers:
@@ -32,6 +38,12 @@ class RawResponse(object):
             self.headers = http_headers.GoLikeHeaders({})
 
     def dump(self, stream, flush=True):
+        """
+        Dumps raw JSON response to a stream
+        :param stream: str-like stream
+        :param flush: whether flush data on write or not
+        :return: result of dumping
+        """
         raw_body = ujson.dumps(self.body)
         self.headers.set("content-length", len(raw_body))
         resp = ujson.dumps({

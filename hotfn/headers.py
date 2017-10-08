@@ -16,6 +16,10 @@
 class GoLikeHeaders(object):
 
     def __init__(self, headers):
+        """
+        Go-like headers, this format necessary for Fn
+        :param headers: HTTP headers
+        """
         if not isinstance(headers, dict):
             raise TypeError("Invalid headers type: {}, only dict allowed."
                             .format(type(headers)))
@@ -25,6 +29,11 @@ class GoLikeHeaders(object):
         self.__headers = headers
 
     def get(self, key):
+        """
+
+        :param key:
+        :return:
+        """
         if key in self.__headers:
             return (self.__headers[key][0]
                     if len(self.__headers[key]) == 1
@@ -33,12 +42,24 @@ class GoLikeHeaders(object):
             raise KeyError("Missing key: {}".format(key))
 
     def set(self, key, value):
+        """
+
+        :param key:
+        :param value:
+        :return:
+        """
         if isinstance(value, (str, float, int)):
             self.__headers[key] = [str(value), ]
         if isinstance(value, (list, tuple)):
             self.__headers = value
 
     def append(self, key, value):
+        """
+
+        :param key:
+        :param value:
+        :return:
+        """
         if key in self.__headers:
             current = self.__headers[key]
             if not isinstance(current, (list, tuple)):
