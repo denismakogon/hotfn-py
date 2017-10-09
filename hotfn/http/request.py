@@ -19,9 +19,14 @@ from hotfn import errors
 
 
 def readline(stream):
-    """Read a line up until the \r\n termination
-
-    Return the line with that terminator included"""
+    """
+    Read a line up until the \r\n termination.
+    Return the line with that terminator included.
+    :param stream: byte stream
+    :type stream: io.BytesIO[bytes]
+    :return string representation of raw HTTP request
+    :rtype: str
+    """
     l = bytes()
     ret = False
 

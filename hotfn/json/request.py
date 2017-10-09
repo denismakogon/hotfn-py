@@ -22,7 +22,13 @@ from hotfn import headers
 
 
 def readline(stream):
-    """Read a line up until line can be valid JSON"""
+    """
+    Read a line up until line can be valid JSON
+    :param stream: input stream
+    :type stream: io.TextIOWrapper[str]
+    :return raw request body
+    :rtype: dict
+    """
     line = str()
     ret = False
 
@@ -61,6 +67,11 @@ class RawRequest(object):
         self.body_stream = None
 
     def parse_raw_request(self):
+        """
+        Parses raw JSON request into its context and body
+        :return: tuple of request context and body
+        :rtype: tuple
+        """
         if self.stream is None:
             raise EOFError("Previous stream had no terminator")
         try:
