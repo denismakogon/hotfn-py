@@ -7,8 +7,8 @@ Purpose of this library to provide simple interface to parse HTTP 1.1 requests r
 
 Following examples are showing how to use API of this library to work with streaming HTTP requests from Fn service.
 
-Handling Hot Functions
-----------------------
+Handling Hot HTTP Functions
+---------------------------
 
 A main loop is supplied that can repeatedly call a user function with a series of HTTP requests.
 In order to utilise this, you can write your `app.py` as follows:
@@ -28,8 +28,8 @@ if __name__ == "__main__":
 
 ```
 
-Automatic input coercions
--------------------------
+Automatic HTTP input coercions
+------------------------------
 
 Decorators are provided that will attempt to coerce input values to Python types.
 Some attempt is made to coerce return values from these functions also:
@@ -51,8 +51,8 @@ if __name__ == "__main__":
 
 ```
 
-Working with async automatic input coercions
---------------------------------------------
+Working with async automatic HTTP input coercions
+-------------------------------------------------
 
 Latest version (from 0.0.6) supports async coroutines as a request body processors:
 ```python
@@ -79,4 +79,46 @@ if __name__ == "__main__":
     worker.run(app, loop=loop)
 
 ```
+
+Handling Hot JSON Functions
+---------------------------
+
+A main loop is supplied that can repeatedly call a user function with a series of JSON requests.
+In order to utilise this, you can write your `app.py` as follows:
+
+```python
+from hotfn.json import worker
+
+
+def handler(context, data=None, loop=None):
+    return data
+
+
+if __name__ == "__main__":
+    worker.run(handler)
+
+```
+
+Working with async Hot JSON Functions
+-------------------------------------
+
+Latest version (from 0.0.6) supports async coroutines as a request body processors:
+```python
+
+import asyncio
+
+from hotfn.json import worker
+
+
+async def handler(context, data=None, loop=None):
+    return data
+
+
+if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+    worker.run(handler, loop=loop)
+
+```
+
+
 As you can see `app` function is no longer callable, because its type: coroutine, so we need to bypass event loop inside 
